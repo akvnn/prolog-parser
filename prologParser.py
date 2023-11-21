@@ -60,7 +60,7 @@ lookupDictionary = {
 #%% Globals
 fileString = ''
 fileStringIterator = None
-
+outputFile = 'parser_output.txt'
 lexeme = []
 lexLen = 0
 
@@ -68,31 +68,55 @@ nextCharacter = ''
 nextToken = None
 charClass = None
 
+lineNumber = 1
+charNumber = 0
+errorCount = 0
+lines = []
+#%%
+def parser_out(message, error = True):
+    global errorCount
+    if error: 
+        errorCount += 1
+        with open(outputFile, 'a') as file:
+            file.write(f'{message} on line {lineNumber}, character {charNumber}\n')
+    else:
+        with open(outputFile, 'a') as file:
+            file.write(f'{message}\n')
+    
 #%% Lexical Analyzer Functions
-def run(filePathString):
+def run():
+    global fileString, fileStringIterator, nextToken, errorCount, lineNumber, charNumber, lines  
     try: 
-        with open(filePathString, 'r') as file:
-            global fileString
-            global fileStringIterator
-            global nextToken
+        with open(outputFile, 'w') as file: # clear output file
+            file.write('')  
+        fileIndex = 1
+        while True:
+            with open(f'{fileIndex}.txt', 'r') as file:
             
-            fileString = file.read()
-            fileStringIterator = iter(fileString)
-                        
-            getChar()
-            lex()
-            program()
+                fileString = file.read()
+                lines = fileString.split('\n')
+                fileStringIterator = iter(fileString)
+                lineNumber = 1
+                charNumber = 0
+                errorCount = 0
+                getChar()
+                lex()
+                print(f'Parsing file {fileIndex}...')
+                parser_out(f'Parsing file {fileIndex}...', error = False)
+                program()
+                print(f'Parsing file {fileIndex} complete! {errorCount} errors were found') 
+                parser_out(f'Parsing file {fileIndex} complete! {errorCount} error{" was" if errorCount == 1 else "s were"} found', error=False)
+                fileIndex += 1
             # while nextToken != TokenCodes.EOF: 
             #     lex()
     except FileNotFoundError:
-        print(f"The file '{filePathString}' was not found")
+        print(f"Parsed all {fileIndex - 1} files!")
+        parser_out(f"Parsed all {fileIndex - 1} files!", error = False)
     except Exception as error:
         print(f'An error occurred: {error}')
 
 def addChar():
-    global lexLen
-    global nextCharacter
-    global lexeme
+    global lexLen, nextCharacter, lexeme
     
     if lexLen <= 98:
         lexLen += 1
@@ -101,9 +125,7 @@ def addChar():
         print("Lexeme exceeded 98 characters!")
 
 def getChar():
-    global nextCharacter
-    global fileStringIterator
-    global charClass
+    global nextCharacter, fileStringIterator, charClass, charNumber, lineNumber
 
     try: 
         nextCharacter = next(fileStringIterator)
@@ -114,15 +136,18 @@ def getChar():
             charClass = CharacterClasses.DIGIT
         else: 
             charClass = CharacterClasses.UNKNOWN
+        
+        if not nextCharacter == '\n':
+            charNumber += 1
+        else: 
+            lineNumber += 1
+            charNumber = 0
+            
     except StopIteration:
         charClass = CharacterClasses.EOF
 
 def lex(): 
-    global nextCharacter
-    global charClass
-    global nextToken
-    global lexeme
-    global lexLen
+    global nextCharacter, charClass, nextToken, lexeme, lexLen
     
     lexeme = []
     lexLen = 0
@@ -151,6 +176,7 @@ def lex():
     # Paranthesis and Operators
     elif charClass == CharacterClasses.UNKNOWN:
         if nextCharacter == '?' or nextCharacter == ':':
+            
             # Consider the character that follows it directly, if its '-', then we have a 
             # special operator
             former = nextCharacter # Store the former
@@ -185,11 +211,13 @@ def lookup(character):
         characterToken = lookupDictionary[character]
     except KeyError: 
         # Error: Symbol Not Recognized?
-        characterToken = TokenCodes.EOF
+        print(f'Symbol {character} is not recognized in the grammar of the language')
+        parser_out(f"SyntaxError symbol {character} is not recognized")
+        characterToken = TokenCodes.EOF # To Do
 
     addChar()
     return characterToken
-#%%
+#%% Syntax Analyzer
 def program():
     print("Enter <program>")
     if nextToken == TokenCodes.QUERY_OPERATOR :
@@ -210,8 +238,13 @@ def query():
             lex()
         else: 
             print("\033[91mError: Missing period\033[0m")
+            parser_out(f"SyntaxError expcted '.' but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
+            # continue parsing
+            
     else:
         print("\033[91mError: Missing query operator\033[0m")
+        parser_out(f"SyntaxError expected '?-' but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
+        # continue parsing
     print("Exit <query>")
     
 def clause_list(optional = False):
@@ -225,6 +258,7 @@ def clause_list(optional = False):
     # lex() 
     clause_list(optional = True)
     print("Exit <clause_list>")
+    
 def clause(optional = False):
     print("Enter <clause>")
     predicate(optional)
@@ -236,16 +270,21 @@ def clause(optional = False):
         if optional == True:
             return True
         print("\033[91mError: Clause missing period\033[0m")
+        parser_out(f"SyntaxError expcted '.' but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]}instead")
+        # continue parsing
+        
     lex() # match the period
     print("Exit <clause>")
+    
 def predicate_list(optional = False):
     print("Enter <predicate_list>")
     predicate(optional)
-    # lex() # added lex() here
+    # lex() # commented lex() here
     if nextToken == TokenCodes.COMMA:
         lex()
         predicate_list(optional)
     print("Exit <predicate_list>")
+    
 def predicate(optional = False):
     print("Enter <predicate>")
     atom(optional)
@@ -259,7 +298,10 @@ def predicate(optional = False):
             if optional == True:
                 return True
             print("\033[91mError: Missing right parenthesis in predicate\033[0m")
+            parser_out(f"SyntaxError expcted ')' but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
+            # continue parsing
     print("Exit <predicate>")
+    
 def term_list(optional = False):
     print("Enter <term_list>")
     term(optional)
@@ -267,11 +309,12 @@ def term_list(optional = False):
         lex()
         term_list(optional)
     print("Exit <term_list>")
+    
 def term(optional = False):
     print("Enter <term>")
     # can be atom or variable or structure or numeral
-    if nextToken == TokenCodes.IDENT or lexeme[0] == '_': 
-        if lexeme[0].isupper() or lexeme[0] == '_':
+    if nextToken == TokenCodes.IDENT or (len(lexeme) > 0 and lexeme[0] == '_'): 
+        if len(lexeme) > 0 and (lexeme[0].isupper() or lexeme[0] == '_'):
             variable()
         else:
             atom()
@@ -284,9 +327,12 @@ def term(optional = False):
                     if optional == True:
                         return True
                     print("\033[91mError: Missing right parenthesis\033[0m")
+                    parser_out(f"SyntaxError expcted ')' but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
+                    # continue parsing
     elif nextToken==TokenCodes.INT_LIT:
         numeral()
     print("Exit <term>")
+    
 def atom(optional = False):
     print("Enter <atom>")
     if nextToken == TokenCodes.IDENT:
@@ -300,11 +346,15 @@ def atom(optional = False):
             if optional == True:
                 return True
             print("\033[91mError: Missing single quote\033[0m")
+            parser_out(f"SyntaxError expcted ''' but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
+            # continue parsing
     else:
         if optional == True:
             return True
         print(nextToken, ' in atom')
         print("\033[91mError: Missing atom\033[0m")
+        parser_out(f"SyntaxError expected a lowercase character or '' but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
+        # continue parsing
     print("Exit <atom>")
     
 def small_atom(optional = False):
@@ -317,23 +367,26 @@ def small_atom(optional = False):
     
 def lowercase_char(optional = False):
     print("Enter <lowercase_char>")
-    if lexeme[0].islower():
+    if len(lexeme) > 0 and lexeme[0].islower():
         lexeme.pop(0)
     else:
         if optional == True:
             return True
         print("\033[91mError: Missing lowercase character \033[0m")
+        parser_out(f"SyntaxError expected a lowercase character but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
     print("Exit <lowercase_char>")
     
 def uppercase_char(optional = False):
     print("Enter <uppercase_char>")
-    if lexeme[0].isupper() or lexeme[0] == '_':
+    if len(lexeme) > 0 and (lexeme[0].isupper() or lexeme[0] == '_'):
         lexeme.pop(0)
     else:
         if optional == True:
             return True
         print("\033[91mError: Missing uppercase character\033[0m")
+        parser_out(f"SyntaxError expected an uppercase character but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
     print("Exit <uppercase_char>")
+    
 def character_list(optional = False):
     print("Enter <character_list>")
     anError = alphanumeric(optional)
@@ -341,6 +394,7 @@ def character_list(optional = False):
         return True
     character_list(optional = True)
     print("Exit <character_list>")
+    
 def alphanumeric(optional = False):
     print("Enter <alphanumeric>")
     if len(lexeme) > 0:
@@ -354,11 +408,13 @@ def alphanumeric(optional = False):
             if optional == True:
                 return True
             print("\033[91mError: Missing alphanumeric character\033[0m")
+            parser_out(f"SyntaxError expected an alphanumeric character but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
             
     else:
         if optional == True:
             return True
         print("\033[91mError: Missing alphanumeric character\033[0m")
+        parser_out(f"SyntaxError expected an alphanumeric character but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
     print("Exit <alphanumeric>")
 
 def numeral(optional = False):
@@ -369,15 +425,18 @@ def numeral(optional = False):
     lex() 
     numeral(optional = True)
     print("Exit <numeral>")
+    
 def digit(optional = False):
     print("Enter <digit>")
-    if lexeme[0].isdigit():
+    if len(lexeme) > 0 and lexeme[0].isdigit():
         lexeme.pop(0)
     else:
         if optional == True:
             return True
         print("\033[91mError: Missing digit\033[0m")
+        parser_out(f"SyntaxError expected a digit but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
     print("Exit <digit>")
+    
 def string(optional = False):
     print("Enter <string>")
     charError = character(optional)
@@ -385,7 +444,8 @@ def string(optional = False):
         return True
     lex() 
     string(optional = True)
-    print("Exit <string>")    
+    print("Exit <string>")   
+     
 def character(optional = False):
     isAlphanumericError = alphanumeric(optional = True)
     if isAlphanumericError == True:
@@ -394,17 +454,22 @@ def character(optional = False):
             if optional == True:
                 return True
             print("\033[91mError: Missing character\033[0m")
+            parser_out(f"SyntaxError expected a character but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
     print("Exit <character>")
+    
 def special(optional = False):
     print("Enter <special>")
-    specialChar = nextToken
-    if specialChar == TokenCodes.AND_OP or specialChar == TokenCodes.QUESTION_MARK or specialChar == TokenCodes.HASH_SYMBOL or specialChar == TokenCodes.DOLLAR_SIGN or specialChar == TokenCodes.ADD_OP or specialChar == TokenCodes.SUB_OP or specialChar == TokenCodes.COLON or specialChar == TokenCodes.DOT or specialChar == TokenCodes.MULT_OP or specialChar == TokenCodes.DIV_OP or specialChar == TokenCodes.CARROT or specialChar == TokenCodes.WAVE_SIGN or specialChar == TokenCodes.BACKSLASH:
+    # specialChar = nextToken
+    # if len(lexeme) > 0 and (specialChar == TokenCodes.AND_OP or specialChar == TokenCodes.QUESTION_MARK or specialChar == TokenCodes.HASH_SYMBOL or specialChar == TokenCodes.DOLLAR_SIGN or specialChar == TokenCodes.ADD_OP or specialChar == TokenCodes.SUB_OP or specialChar == TokenCodes.COLON or specialChar == TokenCodes.DOT or specialChar == TokenCodes.MULT_OP or specialChar == TokenCodes.DIV_OP or specialChar == TokenCodes.CARROT or specialChar == TokenCodes.WAVE_SIGN or specialChar == TokenCodes.BACKSLASH):
+    if len(lexeme > 0) and lexeme[0] in ['+', '-', '*', '/', '\\', '^', '~', ':', '.', '?', '#', '$', '&']:
         lexeme.pop(0)
     else:
         if optional == True:
             return True
         print("\033[91mError: Missing special character\033[0m")
+        parser_out(f"SyntaxError expected a special character (+ | - | * | / | \ | ^ | ~ | : | . | ? | # | $ | &) but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead") 
     print("Exit <special>")
+    
 def variable(optional = False):
     print("Enter <variable>")
     upperCaseError = uppercase_char(optional)
@@ -416,10 +481,6 @@ def variable(optional = False):
    
         
     
-#%%
-
-run('test.txt')
-#%%
-
-
+#%% Driver
+run()
 # %%
