@@ -1,0 +1,24 @@
+Parsing file 1...
+Parsing file 1 complete! 0 errors were found
+Parsing file 2...
+Parsing file 2 complete! 0 errors were found
+Parsing file 3...
+Parsing file 3 complete! 0 errors were found
+Parsing file 4...
+SyntaxError expcted ')' but found ' instead on line 1, character 28
+SyntaxError expected '?-' but found line say(N, From, To) :- write('move disc '), write(N), write(' from '), instead on line 1, character 37
+SyntaxError expected EOF but found line say(N, From, To) :- write('move disc '), write(N), write(' from '), instead on line 1, character 37
+Parsing file 4 complete! 3 errors were found
+Parsing file 5...
+SyntaxError expected a lowercase character but found A instead on line 3, character 23
+SyntaxError expected '?-' but found * instead on line 3, character 29
+SyntaxError expected EOF but found * instead on line 3, character 29
+Parsing file 5 complete! 3 errors were found
+Parsing file 6...
+SyntaxError symbol [ is not recognized on line 1, character 11
+SyntaxError expcted ')' but found [ instead on line 1, character 12
+SyntaxError expcted '.' but found [instead on line 1, character 12
+SyntaxError symbol ] is not recognized on line 1, character 12
+SyntaxError expected '?-' but found ] instead on line 1, character 13
+Parsing file 6 complete! 5 errors were found
+Parsed all 6 files!

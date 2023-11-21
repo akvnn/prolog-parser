@@ -1,5 +1,5 @@
 #%% Lexical Analyzer
-from enum import Enum, auto
+from enum import Enum #, auto
 
 class CharacterClasses(Enum):
     LETTER = 0
@@ -226,12 +226,15 @@ def program():
         clause_list()
         # lex() 
         query()
+    if nextToken != TokenCodes.EOF:
+        print("\033[91mError: Missing EOF\033[0m")
+        parser_out(f"SyntaxError expected EOF but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
+        # continue parsing
     print("Exit <program>")
     
 def query():
     print("Enter <query>")
     if nextToken == TokenCodes.QUERY_OPERATOR:
-        
         lex()
         predicate_list()
         if nextToken == TokenCodes.DOT:
@@ -265,7 +268,7 @@ def clause(optional = False):
     # lex() # commented lex() here
     if nextToken == TokenCodes.DEFINITION_OPERATOR:
         lex()
-        predicate_list(optional)
+        predicate_list()
     elif nextToken != TokenCodes.DOT:
         if optional == True:
             return True
@@ -278,11 +281,11 @@ def clause(optional = False):
     
 def predicate_list(optional = False):
     print("Enter <predicate_list>")
-    predicate(optional)
+    predicate()
     # lex() # commented lex() here
     if nextToken == TokenCodes.COMMA:
         lex()
-        predicate_list(optional)
+        predicate_list()
     print("Exit <predicate_list>")
     
 def predicate(optional = False):
@@ -291,7 +294,7 @@ def predicate(optional = False):
     # lex() 
     if(nextToken == TokenCodes.LEFT_PAREN):
         lex()
-        term_list(optional)
+        term_list()
         if(nextToken == TokenCodes.RIGHT_PAREN):
             lex()
         else:
@@ -304,10 +307,10 @@ def predicate(optional = False):
     
 def term_list(optional = False):
     print("Enter <term_list>")
-    term(optional)
+    term()
     if(nextToken == TokenCodes.COMMA):
         lex()
-        term_list(optional)
+        term_list()
     print("Exit <term_list>")
     
 def term(optional = False):
@@ -353,7 +356,7 @@ def atom(optional = False):
             return True
         print(nextToken, ' in atom')
         print("\033[91mError: Missing atom\033[0m")
-        parser_out(f"SyntaxError expected a lowercase character or '' but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
+        parser_out(f"SyntaxError expected a lowercase character or ''' but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead")
         # continue parsing
     print("Exit <atom>")
     
@@ -459,15 +462,13 @@ def character(optional = False):
     
 def special(optional = False):
     print("Enter <special>")
-    # specialChar = nextToken
-    # if len(lexeme) > 0 and (specialChar == TokenCodes.AND_OP or specialChar == TokenCodes.QUESTION_MARK or specialChar == TokenCodes.HASH_SYMBOL or specialChar == TokenCodes.DOLLAR_SIGN or specialChar == TokenCodes.ADD_OP or specialChar == TokenCodes.SUB_OP or specialChar == TokenCodes.COLON or specialChar == TokenCodes.DOT or specialChar == TokenCodes.MULT_OP or specialChar == TokenCodes.DIV_OP or specialChar == TokenCodes.CARROT or specialChar == TokenCodes.WAVE_SIGN or specialChar == TokenCodes.BACKSLASH):
     if len(lexeme > 0) and lexeme[0] in ['+', '-', '*', '/', '\\', '^', '~', ':', '.', '?', '#', '$', '&']:
         lexeme.pop(0)
     else:
         if optional == True:
             return True
         print("\033[91mError: Missing special character\033[0m")
-        parser_out(f"SyntaxError expected a special character (+ | - | * | / | \ | ^ | ~ | : | . | ? | # | $ | &) but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead") 
+        parser_out(f"SyntaxError expected a special character (+ | - | * | / | \ | ^ | ~ | : | . | ? | # | $ | & ) but found {lexeme[0] if len(lexeme) > 0 else 'line ' + lines[lineNumber - 1]} instead") 
     print("Exit <special>")
     
 def variable(optional = False):
