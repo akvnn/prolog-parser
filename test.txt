@@ -1,10 +1,7 @@
-criminal(X) :- american(X), weapon(Y), nation(Z),
- hostile(Z), sells(X,Z,Y).
-owns(nono,msl(nono)). missile(msl(nono)).
-sells(west,nono,M) :- owns(nono,M), missile(M).
-weapon(W) :- missile(W).
-hostile(H) :- enemy(H,america).
-american(west).
-nation(nono). enemy(nono,america).
-nation(america).
-?- criminal(Who).
+say(N, From, To) :- write('move disc '), write(N), write(' from '),
+ write(From), write(' to '), write(To), nl.
+hanoi(N) :- move(N, left, center, right).
+move(0, _, _, _).
+move(N, From, To, Using) :- is(M, N-1), move(M, From, Using, To),
+ say(N, From, To), move(M, Using, To, From).
+?- hanoi(3).

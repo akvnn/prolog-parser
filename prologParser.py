@@ -1,4 +1,4 @@
-#%% Tokens and Character Classes
+#%% Lexical Analyzer
 from enum import Enum, auto
 
 class CharacterClasses(Enum):
@@ -33,6 +33,7 @@ class TokenCodes(Enum):
     SINGLE_QUOTE = 40
     EOF = 50
 
+
 lookupDictionary = {
     '(': TokenCodes.LEFT_PAREN,
     ')': TokenCodes.RIGHT_PAREN,
@@ -55,7 +56,6 @@ lookupDictionary = {
     '\\': TokenCodes.BACKSLASH,
     "'": TokenCodes.SINGLE_QUOTE   
 }
-
 
 #%% Globals
 fileString = ''
@@ -108,7 +108,7 @@ def getChar():
     try: 
         nextCharacter = next(fileStringIterator)
         
-        if nextCharacter.isalpha():
+        if nextCharacter.isalpha() or nextCharacter == '_':
             charClass = CharacterClasses.LETTER
         elif nextCharacter.isnumeric():
             charClass = CharacterClasses.DIGIT
@@ -124,8 +124,6 @@ def lex():
     global lexeme
     global lexLen
     
-
-    
     lexeme = []
     lexLen = 0
     
@@ -136,24 +134,39 @@ def lex():
     if charClass == CharacterClasses.LETTER: 
         addChar()
         getChar()
-        # while charClass == CharacterClasses.LETTER or charClass == CharacterClasses.DIGIT:
-        #     addChar()
-        #     getChar()
+        while charClass == CharacterClasses.LETTER or charClass == CharacterClasses.DIGIT:
+            addChar()
+            getChar()
         nextToken = TokenCodes.IDENT
     
     # Parse integer literals
     elif charClass == CharacterClasses.DIGIT:
         addChar()
         getChar()
-        # while charClass == CharacterClasses.DIGIT:
-        #     addChar()
-        #     getChar()
+        while charClass == CharacterClasses.DIGIT:
+            addChar()
+            getChar()
         nextToken = TokenCodes.INT_LIT
     
     # Paranthesis and Operators
     elif charClass == CharacterClasses.UNKNOWN:
-        # Return an error? Unknown character
-        nextToken = lookup(nextCharacter)
+        if nextCharacter == '?' or nextCharacter == ':':
+            # Consider the character that follows it directly, if its '-', then we have a 
+            # special operator
+            former = nextCharacter # Store the former
+            addChar()
+            getChar() # Check the next character
+            
+            if nextCharacter == '-':
+                # Special case
+                nextToken = lookup(former + nextCharacter) # addChar() is called within
+                # getChar() # go to the next character
+            else: 
+                nextToken = lookup(former)
+        else:
+            nextToken = lookup(nextCharacter)
+            # getChar()
+        # No need to call it here (we're calling it above anyways)
         getChar()
     
     # End Of File
@@ -162,34 +175,20 @@ def lex():
         lexeme = ['E', 'O', 'F', 0]
 
     print(f"Next token is {nextToken}, Next lexeme is: {lexeme}")
-    # in the case of a definition operator, lexeme is [':', '-']
     
     return nextToken
 
 def lookup(character): 
-    global fileStringIterator #ak added this
-    global nextCharacter #ak added this
-    global lexeme #ak added this
     characterToken = None
     
     try:
         characterToken = lookupDictionary[character]
-        
-        if characterToken == TokenCodes.COLON or characterToken == TokenCodes.QUESTION_MARK: # ak added this
-            nextCharacter = next(fileStringIterator)
-            if nextCharacter == '-':
-                lexeme.append(character)
-                characterToken = lookupDictionary[character + nextCharacter]
-            else:
-                # revert back to previous character to do...
-                print('reverting back to previous character')
     except KeyError: 
         # Error: Symbol Not Recognized?
         characterToken = TokenCodes.EOF
 
     addChar()
     return characterToken
-
 #%%
 def program():
     print("Enter <program>")
@@ -197,13 +196,14 @@ def program():
         query()
     else:
         clause_list()
-        lex() 
+        # lex() 
         query()
     print("Exit <program>")
     
 def query():
     print("Enter <query>")
     if nextToken == TokenCodes.QUERY_OPERATOR:
+        
         lex()
         predicate_list()
         if nextToken == TokenCodes.DOT:
@@ -222,7 +222,7 @@ def clause_list(optional = False):
             return    
     else:
         clause()    
-    lex() 
+    # lex() 
     clause_list(optional = True)
     print("Exit <clause_list>")
 def clause(optional = False):
@@ -249,7 +249,7 @@ def predicate_list(optional = False):
 def predicate(optional = False):
     print("Enter <predicate>")
     atom(optional)
-    lex() # this lex should not be here?
+    # lex() 
     if(nextToken == TokenCodes.LEFT_PAREN):
         lex()
         term_list(optional)
@@ -269,12 +269,9 @@ def term_list(optional = False):
     print("Exit <term_list>")
 def term(optional = False):
     print("Enter <term>")
-    print(nextToken, ' in term')
     # can be atom or variable or structure or numeral
-    if nextToken == TokenCodes.IDENT: 
-        # if nextCharacter.isupper(): # wrong ? 
-        # if lexeme[0].isupper(): 
-        if nextCharacter.isupper(): #not working.
+    if nextToken == TokenCodes.IDENT or lexeme[0] == '_': 
+        if lexeme[0].isupper() or lexeme[0] == '_':
             variable()
         else:
             atom()
@@ -313,16 +310,15 @@ def atom(optional = False):
 def small_atom(optional = False):
     print("Enter <small_atom>")
     lowercase_char(optional)
-    lex() 
+    lex()
     character_list(optional = True)
     
     print("Exit <small_atom>")
     
 def lowercase_char(optional = False):
     print("Enter <lowercase_char>")
-    # if lexeme[0].islower():
-    if nextCharacter.islower():
-        lex()
+    if lexeme[0].islower():
+        lexeme.pop(0)
     else:
         if optional == True:
             return True
@@ -331,9 +327,8 @@ def lowercase_char(optional = False):
     
 def uppercase_char(optional = False):
     print("Enter <uppercase_char>")
-    # if nextCharacter.isupper() or nextCharacter == '_':
-    if nextCharacter.isupper() or nextCharacter == '_':
-        lex()
+    if lexeme[0].isupper() or lexeme[0] == '_':
+        lexeme.pop(0)
     else:
         if optional == True:
             return True
@@ -348,12 +343,18 @@ def character_list(optional = False):
     print("Exit <character_list>")
 def alphanumeric(optional = False):
     print("Enter <alphanumeric>")
-    if nextCharacter.islower():
-        lowercase_char(optional)
-    elif nextCharacter.isnumeric():
-        digit(optional)
-    elif nextCharacter.isupper():
-        uppercase_char(optional)
+    if len(lexeme) > 0:
+        if lexeme[0].islower():
+            lowercase_char(optional)
+        elif lexeme[0].isnumeric():
+            digit(optional)
+        elif lexeme[0].isupper():
+            uppercase_char(optional)
+        else:
+            if optional == True:
+                return True
+            print("\033[91mError: Missing alphanumeric character\033[0m")
+            
     else:
         if optional == True:
             return True
@@ -370,8 +371,8 @@ def numeral(optional = False):
     print("Exit <numeral>")
 def digit(optional = False):
     print("Enter <digit>")
-    if nextCharacter.isnumeric():
-        lex()
+    if lexeme[0].isdigit():
+        lexeme.pop(0)
     else:
         if optional == True:
             return True
@@ -398,7 +399,7 @@ def special(optional = False):
     print("Enter <special>")
     specialChar = nextToken
     if specialChar == TokenCodes.AND_OP or specialChar == TokenCodes.QUESTION_MARK or specialChar == TokenCodes.HASH_SYMBOL or specialChar == TokenCodes.DOLLAR_SIGN or specialChar == TokenCodes.ADD_OP or specialChar == TokenCodes.SUB_OP or specialChar == TokenCodes.COLON or specialChar == TokenCodes.DOT or specialChar == TokenCodes.MULT_OP or specialChar == TokenCodes.DIV_OP or specialChar == TokenCodes.CARROT or specialChar == TokenCodes.WAVE_SIGN or specialChar == TokenCodes.BACKSLASH:
-        lex()
+        lexeme.pop(0)
     else:
         if optional == True:
             return True
@@ -409,7 +410,7 @@ def variable(optional = False):
     upperCaseError = uppercase_char(optional)
     if upperCaseError == True:
         return True
-    # lex() # commented lex out for now
+    lex() 
     character_list(optional = True)
     print("Exit <variable>")
    
