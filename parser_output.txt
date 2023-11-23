@@ -20,5 +20,6 @@ SyntaxError expcted ')' but found [ instead on line 1, character 12
 SyntaxError expcted '.' but found [instead on line 1, character 12
 SyntaxError symbol ] is not recognized on line 1, character 12
 SyntaxError expected '?-' but found ] instead on line 1, character 13
-Parsing file 6 complete! 5 errors were found
+SyntaxError expected EOF but found ] instead on line 1, character 13
+Parsing file 6 complete! 6 errors were found
 Parsed all 6 files!

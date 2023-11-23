@@ -213,7 +213,7 @@ def lookup(character):
         # Error: Symbol Not Recognized?
         print(f'Symbol {character} is not recognized in the grammar of the language')
         parser_out(f"SyntaxError symbol {character} is not recognized")
-        characterToken = TokenCodes.EOF # To Do
+        # characterToken = TokenCodes.EOF 
 
     addChar()
     return characterToken
@@ -462,7 +462,7 @@ def character(optional = False):
     
 def special(optional = False):
     print("Enter <special>")
-    if len(lexeme > 0) and lexeme[0] in ['+', '-', '*', '/', '\\', '^', '~', ':', '.', '?', '#', '$', '&']:
+    if len(lexeme > 0) and lexeme[0] in ['+', '-', '*', '/', '\\', '^', '~', ':', '.', '?', '#', '$', '&', ' ']:
         lexeme.pop(0)
     else:
         if optional == True:
