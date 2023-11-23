@@ -154,7 +154,10 @@ def lex():
     
     while nextCharacter == ' ' or nextCharacter == '\n':
         getChar()
-    
+        if charClass == CharacterClasses.EOF:
+            nextToken = TokenCodes.EOF
+            lexeme = ['E', 'O', 'F', 0]
+            return
     # Parse identifiers
     if charClass == CharacterClasses.LETTER: 
         addChar()

@@ -8,3 +8,4 @@ american(west).
 nation(nono). enemy(nono,america).
 nation(america).
 ?- criminal(Who).
+
